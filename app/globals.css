@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020617;
+  --foreground: #e2e8f0;
+  --font-geist-sans: "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-geist-mono: "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  --font-space-grotesk: "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
 @theme inline {
@@ -10,17 +13,160 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-space-grotesk);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #020617;
+    --foreground: #e2e8f0;
   }
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.28);
+  color: #e0f2fe;
+}
+
+.font-display {
+  font-family: var(--font-space-grotesk), Arial, Helvetica, sans-serif;
+}
+
+.prism-orb {
+  position: absolute;
+  pointer-events: none;
+  width: 16rem;
+  height: 16rem;
+  border-radius: 9999px;
+  filter: blur(18px);
+  opacity: 0.9;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.88) 0%, rgba(37, 99, 235, 0.22) 42%, rgba(2, 6, 23, 0) 72%);
+}
+
+.prism-orb-left {
+  left: -4rem;
+  top: 8rem;
+  animation: prism-float 7.5s ease-in-out infinite;
+}
+
+.prism-orb-right {
+  right: -4rem;
+  top: 5rem;
+  animation: prism-float 9.5s ease-in-out infinite reverse;
+}
+
+.clip-hexagon {
+  clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
+}
+
+.prism-marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 1rem;
+  will-change: transform;
+}
+
+.prism-marquee-left {
+  animation: prism-marquee-left 34s linear infinite;
+}
+
+.prism-marquee-right {
+  animation: prism-marquee-right 34s linear infinite;
+}
+
+@keyframes prism-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, 22px, 0) scale(1.06);
+  }
+}
+
+@keyframes prism-marquee-left {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(calc(-50% - 0.5rem), 0, 0);
+  }
+}
+
+@keyframes prism-marquee-right {
+  0% {
+    transform: translate3d(calc(-50% - 0.5rem), 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.sliderimage{
+  height: 90px;
+}
+
+.jobs-map-pin {
+  transform: translate3d(0, 0, 0);
+}
+
+.jobs-map-marker {
+  animation: jobs-map-float 4.6s ease-in-out infinite;
+}
+
+.jobs-map-pin:hover .jobs-map-marker {
+  animation-play-state: paused;
+}
+
+.jobs-map-popup::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 14px;
+  height: 14px;
+  background: rgba(2, 6, 23, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+@keyframes jobs-map-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@media (max-width: 1023px) {
+  .jobs-map-popup {
+    width: 12.5rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .jobs-world-map {
+    aspect-ratio: 1.22 / 1;
+  }
+
+  .jobs-map-popup {
+    display: none;
+  }
 }
