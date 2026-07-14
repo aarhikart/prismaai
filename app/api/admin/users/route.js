@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/mongodb";
 import AdminUser from "@/models/AdminUser";
 
 export async function GET() {
-  const { error } = await requireApiRole([ADMIN_ROLES.ADMIN]);
+  const { error } = await requireApiRole([ADMIN_ROLES.ADMIN, ADMIN_ROLES.HR]);
 
   if (error) {
     return error;

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { getJobById, getJobs } from "@/lib/job-service";
+import { getJobById, getPublicJobs } from "@/lib/job-service";
 import JobApplyModal from "../_components/job-apply-modal";
+import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,13 @@ function detailItems(job) {
 export default async function JobDetailPage({ params }) {
   const { id } = await params;
   const job = await getJobById(id);
-  const jobs = await getJobs();
+  const jobs = await getPublicJobs();
+  const currentUser = await getCurrentUser();
 
-  if (!job) {
+  const isAuthorized = currentUser && ["Admin", "HR"].includes(currentUser.role);
+  const isPublic = !job?.status || ["Approved", "Published"].includes(job.status);
+
+  if (!job || (!isPublic && !isAuthorized)) {
     return (
       <div className="min-h-screen bg-slate-100 px-4 py-16 text-center text-slate-900">
         <div className="mx-auto max-w-xl rounded-[2rem] bg-white px-6 py-12 shadow-sm ring-1 ring-slate-200">

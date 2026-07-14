@@ -65,6 +65,56 @@ const JobSchema = new mongoose.Schema(
       type: [JobSectionSchema],
       default: [],
     },
+    status: {
+      type: String,
+      default: "Draft",
+      enum: ["Draft", "Pending Review", "Changes Requested", "Approved", "Rejected", "Published"],
+    },
+    creatorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AdminUser",
+    },
+    creatorName: {
+      type: String,
+      default: "",
+    },
+    reviewerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AdminUser",
+    },
+    reviewerName: {
+      type: String,
+      default: "",
+    },
+    timeline: {
+      type: [
+        {
+          user: String,
+          role: String,
+          action: String,
+          comment: String,
+          date: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
+    comments: {
+      type: [
+        {
+          user: String,
+          role: String,
+          message: String,
+          date: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );

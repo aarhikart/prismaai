@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getJobs } from "@/lib/job-service";
+import { getPublicJobs } from "@/lib/job-service";
 import { FooterSection } from "@/app/_components/landing/footer-section";
 import { Header } from "@/app/_components/landing/header";
 import JobApplyModal from "./_components/job-apply-modal";
@@ -123,7 +123,7 @@ const awardItems = [
 ];
 
 export default async function JobsPage() {
-  const jobs = await getJobs();
+  const jobs = await getPublicJobs();
 
   return (
     <main className="overflow-x-hidden bg-slate-950">

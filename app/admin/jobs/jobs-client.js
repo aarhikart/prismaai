@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const initialSection = { title: "", description: "" };
 const initialForm = {
@@ -14,7 +15,16 @@ const initialForm = {
   ctc: "",
 };
 
-export default function JobsClient() {
+const statusColors = {
+  "Draft": "bg-slate-100 text-slate-700 border-slate-200",
+  "Pending Review": "bg-amber-100 text-amber-700 border-amber-200",
+  "Changes Requested": "bg-orange-100 text-orange-700 border-orange-200",
+  "Approved": "bg-green-100 text-green-700 border-green-200",
+  "Rejected": "bg-red-100 text-red-700 border-red-200",
+  "Published": "bg-blue-100 text-blue-700 border-blue-200"
+};
+
+export default function JobsClient({ currentUser }) {
   const [form, setForm] = useState(initialForm);
   const [sections, setSections] = useState([{ ...initialSection }]);
   const [image, setImage] = useState(null);
@@ -25,19 +35,40 @@ export default function JobsClient() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Workflow states
+  const [reviewers, setReviewers] = useState([]);
+  const [selectedReviewerId, setSelectedReviewerId] = useState("");
+  const [activeTab, setActiveTab] = useState("all_jobs");
+  const [statusToSubmit, setStatusToSubmit] = useState("Draft");
+
   async function loadJobs() {
     const res = await fetch("/api/jobs", { cache: "no-store" });
     const data = await res.json();
     setJobs(data);
   }
 
-  useEffect(() => {
-    async function fetchJobs() {
-      await loadJobs();
+  async function loadReviewers() {
+    try {
+      const res = await fetch("/api/admin/users");
+      if (res.ok) {
+        const data = await res.json();
+        // Exclude current user and marketing roles from reviewer list
+        const list = (data.users || []).filter(
+          (u) => u.id !== currentUser?.id && u.role !== "Marketing"
+        );
+        setReviewers(list);
+      }
+    } catch (err) {
+      console.error("Error loading reviewers:", err);
     }
+  }
 
-    fetchJobs();
-  }, []);
+  useEffect(() => {
+    async function init() {
+      await Promise.all([loadJobs(), loadReviewers()]);
+    }
+    init();
+  }, [currentUser]);
 
   function resetForm() {
     setForm(initialForm);
@@ -45,6 +76,7 @@ export default function JobsClient() {
     setImage(null);
     setEditId(null);
     setExistingImage("");
+    setSelectedReviewerId("");
   }
 
   function handleChange(event) {
@@ -69,7 +101,6 @@ export default function JobsClient() {
       if (current.length === 1) {
         return [{ ...initialSection }];
       }
-
       return current.filter((_, sectionIndex) => sectionIndex !== index);
     });
   }
@@ -79,6 +110,12 @@ export default function JobsClient() {
     setIsSubmitting(true);
     setError("");
     setSuccess("");
+
+    if (statusToSubmit === "Pending Review" && !selectedReviewerId) {
+      setError("Please select a reviewer before submitting for review.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -91,6 +128,10 @@ export default function JobsClient() {
       formData.append("qualification", form.qualification);
       formData.append("ctc", form.ctc);
       formData.append("sections", JSON.stringify(sections));
+      formData.append("status", statusToSubmit);
+      if (selectedReviewerId) {
+        formData.append("reviewerId", selectedReviewerId);
+      }
 
       if (image) {
         formData.append("image", image);
@@ -112,7 +153,19 @@ export default function JobsClient() {
 
       await loadJobs();
       resetForm();
-      setSuccess(editId ? "Job updated successfully." : "Job created successfully.");
+      setSuccess(
+        editId
+          ? statusToSubmit === "Pending Review"
+            ? "Job submitted for review successfully."
+            : statusToSubmit === "Approved"
+            ? "Job posted directly successfully."
+            : "Job updated draft successfully."
+          : statusToSubmit === "Pending Review"
+          ? "Job created and submitted for review."
+          : statusToSubmit === "Approved"
+          ? "Job posted directly successfully."
+          : "Job draft created successfully."
+      );
     } catch (submitError) {
       setError(submitError.message || "Unable to save job.");
     } finally {
@@ -134,6 +187,7 @@ export default function JobsClient() {
     setSections(job.sections?.length ? job.sections : [{ ...initialSection }]);
     setEditId(job._id);
     setExistingImage(job.image || "");
+    setSelectedReviewerId(job.reviewerId || "");
     setImage(null);
     setError("");
     setSuccess("");
@@ -141,6 +195,8 @@ export default function JobsClient() {
   }
 
   async function handleDelete(id) {
+    if (!confirm("Are you sure you want to delete this job?")) return;
+
     setError("");
     setSuccess("");
 
@@ -163,6 +219,36 @@ export default function JobsClient() {
     setSuccess("Job deleted successfully.");
   }
 
+  const allPostingsCount = jobs.length;
+
+  const myPostingsCount = jobs.filter(
+    (job) => String(job.creatorId) === String(currentUser?.id) || !job.creatorId
+  ).length;
+
+  const assignedReviewsCount = jobs.filter(
+    (job) => String(job.reviewerId) === String(currentUser?.id)
+  ).length;
+
+  const filteredJobs = jobs.filter((job) => {
+    if (activeTab === "all_jobs") {
+      return true;
+    } else if (activeTab === "assigned_reviews") {
+      return String(job.reviewerId) === String(currentUser?.id);
+    } else { // activeTab === "my_jobs"
+      return String(job.creatorId) === String(currentUser?.id) || !job.creatorId;
+    }
+  });
+
+  const getStatusBadge = (status) => {
+    const displayStatus = status || "Published";
+    const colorClass = statusColors[displayStatus] || "bg-slate-100 text-slate-700 border-slate-200";
+    return (
+      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${colorClass}`}>
+        {displayStatus}
+      </span>
+    );
+  };
+
   return (
     <div className="grid gap-8">
       <div className="rounded-[2rem] bg-[linear-gradient(120deg,#0f172a_0%,#1d4ed8_45%,#38bdf8_100%)] px-6 py-8 text-white shadow-xl">
@@ -171,9 +257,56 @@ export default function JobsClient() {
         </p>
         <h1 className="mt-3 text-3xl font-bold sm:text-5xl">Jobs Management</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-sky-100 sm:text-base">
-          Create, edit, and publish jobs with multiple structured description blocks using the
-          current API and database flow.
+          Create drafts, assign reviewers, send positions for approval, and manage their workflow progression.
         </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab("all_jobs")}
+          className={`px-6 py-3 text-sm font-semibold transition border-b-2 -mb-px flex items-center gap-2 ${
+            activeTab === "all_jobs"
+              ? "border-sky-500 text-sky-600 font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <span>All Job Postings</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {allPostingsCount}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("my_jobs")}
+          className={`px-6 py-3 text-sm font-semibold transition border-b-2 -mb-px flex items-center gap-2 ${
+            activeTab === "my_jobs"
+              ? "border-sky-500 text-sky-600 font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <span>My Job Postings</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {myPostingsCount}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("assigned_reviews")}
+          className={`px-6 py-3 text-sm font-semibold transition border-b-2 -mb-px flex items-center gap-2 ${
+            activeTab === "assigned_reviews"
+              ? "border-sky-500 text-sky-600 font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-900"
+          }`}
+        >
+          <span>Assigned Reviews</span>
+          {assignedReviewsCount > 0 && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 animate-pulse">
+              {assignedReviewsCount}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="grid gap-8 xl:grid-cols-[1.4fr_0.8fr]">
@@ -185,7 +318,7 @@ export default function JobsClient() {
             <div>
               <h2 className="text-2xl font-bold">{editId ? "Edit Job" : "Create Job"}</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Build a complete role profile with dynamic title and description sections.
+                Build a complete role profile with review workflow integration.
               </p>
             </div>
             {editId ? (
@@ -216,6 +349,7 @@ export default function JobsClient() {
                   name={name}
                   value={form[name]}
                   onChange={handleChange}
+                  required={name === "title"}
                   className="rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-sky-500"
                 />
               </label>
@@ -231,6 +365,23 @@ export default function JobsClient() {
               >
                 <option>Full Time</option>
                 <option>Part Time</option>
+              </select>
+            </label>
+
+            {/* Reviewer Selection */}
+            <label className="grid gap-2 md:col-span-2">
+              <span className="text-sm font-medium">Assigned Reviewer</span>
+              <select
+                value={selectedReviewerId}
+                onChange={(e) => setSelectedReviewerId(e.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-sky-500 bg-white"
+              >
+                <option value="">-- Select Reviewer (HR or Admin) --</option>
+                {reviewers.map((rev) => (
+                  <option key={rev.id} value={rev.id}>
+                    {rev.username} ({rev.role})
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -261,8 +412,7 @@ export default function JobsClient() {
               <div>
                 <h3 className="text-xl font-bold">Dynamic Sections</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Add multiple title and description blocks for responsibilities, benefits, and
-                  requirements.
+                  Add multiple description blocks like responsibilities, requirements, and benefits.
                 </p>
               </div>
               <button
@@ -335,24 +485,43 @@ export default function JobsClient() {
             </p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-6 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {isSubmitting ? "Saving..." : editId ? "Update Job" : "Add Job"}
-          </button>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <button
+              type="submit"
+              onClick={() => setStatusToSubmit("Draft")}
+              disabled={isSubmitting}
+              className="rounded-2xl bg-slate-700 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {isSubmitting && statusToSubmit === "Draft" ? "Saving..." : editId ? "Update Draft" : "Save as Draft"}
+            </button>
+            <button
+              type="submit"
+              onClick={() => setStatusToSubmit("Pending Review")}
+              disabled={isSubmitting}
+              className="rounded-2xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {isSubmitting && statusToSubmit === "Pending Review" ? "Submitting..." : editId ? "Submit for Review" : "Send for Review"}
+            </button>
+            <button
+              type="submit"
+              onClick={() => setStatusToSubmit("Approved")}
+              disabled={isSubmitting}
+              className="rounded-2xl bg-green-600 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {isSubmitting && statusToSubmit === "Approved" ? "Posting..." : editId ? "Direct Post Update" : "Direct Post Job"}
+            </button>
+          </div>
         </form>
 
         <div className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-2xl font-bold">Quick Stats</h2>
           <div className="mt-6 grid gap-4">
             <div className="rounded-[1.75rem] bg-slate-900 p-5 text-white">
-              <p className="text-sm uppercase tracking-[0.3em] text-slate-300">Total Jobs</p>
-              <p className="mt-3 text-4xl font-bold">{jobs.length}</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-slate-300">Jobs in Current Tab</p>
+              <p className="mt-3 text-4xl font-bold">{filteredJobs.length}</p>
             </div>
             <div className="rounded-[1.75rem] bg-sky-100 p-5">
-              <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Mode</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Operation Mode</p>
               <p className="mt-3 text-2xl font-bold text-slate-900">
                 {editId ? "Editing" : "Creating"}
               </p>
@@ -364,60 +533,111 @@ export default function JobsClient() {
       <section className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold">Saved Jobs</h2>
-            <p className="mt-1 text-sm text-slate-500">Added jobs appear here instantly after submit.</p>
+            <h2 className="text-2xl font-bold">
+              {activeTab === "all_jobs"
+                ? "All Job Postings"
+                : activeTab === "assigned_reviews"
+                ? "Assigned For Review"
+                : "My Postings"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {activeTab === "all_jobs"
+                ? "All job postings currently in the system."
+                : activeTab === "assigned_reviews"
+                ? "Jobs that require your approval before publishing."
+                : "Your created jobs. Drafts and pending approval appear here."}
+            </p>
           </div>
         </div>
 
         <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {jobs.map((job) => (
-            <article
-              key={job._id}
-              className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50"
-            >
-              {job.image ? (
-                <img src={job.image} alt={job.title || "Job image"} className="h-56 w-full object-cover" />
-              ) : (
-                <div className="flex h-56 items-center justify-center bg-slate-200 text-slate-500">
-                  No image
+          {filteredJobs.map((job) => {
+            const isDraft = !job.status || job.status === "Draft";
+            const isChanges = job.status === "Changes Requested";
+            const isApproved = job.status === "Approved";
+            const isPublished = job.status === "Published";
+
+            const canEdit = isDraft || isChanges || isApproved || isPublished;
+            const canDelete = isDraft || isApproved || isPublished;
+
+            return (
+              <article
+                key={job._id}
+                className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-50 flex flex-col justify-between"
+              >
+                <div>
+                  {job.image ? (
+                    <img
+                      src={job.image}
+                      alt={job.title || "Job image"}
+                      className="h-56 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-56 items-center justify-center bg-slate-200 text-slate-500">
+                      No image
+                    </div>
+                  )}
+                  <div className="p-5 pb-0">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      {getStatusBadge(job.status)}
+                      {job.reviewerName && (
+                        <span className="text-xs text-slate-500 italic">
+                          Reviewer: {job.reviewerName}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900">{job.title || "Untitled Job"}</h3>
+                    <p className="mt-2 text-sm text-slate-500">{job.address || "No address added"}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                        {job.jobType || "Job Type"}
+                      </span>
+                      <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                        {job.experienceYears || "Experience"}
+                      </span>
+                    </div>
+                    <p className="mt-4 text-xs text-slate-500">
+                      Created by: {job.creatorName || "legacy user"}
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div className="p-5">
-                <h3 className="text-xl font-bold">{job.title || "Untitled Job"}</h3>
-                <p className="mt-2 text-sm text-slate-500">{job.address || "No address added"}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
-                    {job.jobType || "Job Type"}
-                  </span>
-                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
-                    {job.experienceYears || "Experience"}
-                  </span>
+
+                <div className="p-5 pt-4">
+                  <div className="mt-auto flex flex-wrap gap-2">
+                    <Link
+                      href={`/admin/jobs/${job._id}`}
+                      className="rounded-full bg-sky-100 border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-200 flex-1 text-center"
+                    >
+                      View Details
+                    </Link>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(job)}
+                        className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 flex-1"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(job._id)}
+                        className="rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-4 text-sm text-slate-600">{job.sections?.length || 0} detail sections</p>
-                <div className="mt-5 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(job)}
-                    className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(job._id)}
-                    className="rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
 
-        {jobs.length === 0 ? (
+        {filteredJobs.length === 0 ? (
           <div className="mt-6 rounded-[1.75rem] border border-dashed border-slate-300 px-6 py-12 text-center text-slate-500">
-            No jobs found yet. Add your first job from the form above.
+            No jobs found.
           </div>
         ) : null}
       </section>
