@@ -1,5 +1,24 @@
 import mongoose from "mongoose";
 
+const StatusHistorySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedBy: {
+      type: String,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const JobApplicationSchema = new mongoose.Schema(
   {
     jobId: {
@@ -41,6 +60,17 @@ const JobApplicationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    status: {
+      type: String,
+      default: "new",
+      enum: ["new", "reviewed", "under review", "shortlisted", "not shortlisted"],
+      trim: true,
+    },
+    statusUpdatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    statusHistory: [StatusHistorySchema],
   },
   { timestamps: true }
 );

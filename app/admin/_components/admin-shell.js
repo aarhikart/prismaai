@@ -258,7 +258,7 @@ export default function AdminShell({ currentUser, children }) {
                                 className={`py-3 transition ${n.read ? "opacity-60" : "font-medium"}`}
                               >
                                 <Link
-                                  href={`/admin/jobs/${n.job}`}
+                                  href={n.action === "New Application" ? "/admin/job-applications" : `/admin/jobs/${n.job}`}
                                   onClick={() => {
                                     handleMarkAsRead(n._id);
                                     setIsNotificationsOpen(false);
