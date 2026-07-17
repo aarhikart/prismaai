@@ -1,6 +1,8 @@
 import { createPocRequest, getPocRequests } from "@/lib/poc-request-service";
 import { ADMIN_ROLES } from "@/lib/admin-access";
 import { requireApiRole } from "@/lib/auth";
+import AdminUser from "@/models/AdminUser";
+import { createNotification } from "@/lib/notification-service";
 
 function requireField(value, fieldName) {
   if (typeof value !== "string" || !value.trim()) {
@@ -65,6 +67,24 @@ export async function POST(req) {
       industries: [industry],
       message: validateMessage(body.message),
     });
+
+    // Create notifications for all Admins and HRs
+    try {
+      const staff = await AdminUser.find({
+        role: { $in: [ADMIN_ROLES.ADMIN, ADMIN_ROLES.HR] }
+      });
+      for (const member of staff) {
+        await createNotification({
+          recipient: member._id,
+          sender: member._id,
+          senderName: "System",
+          action: "New POC Request",
+          message: `New POC request received from ${pocRequest.company} (${pocRequest.fullName}).`,
+        });
+      }
+    } catch (notifError) {
+      console.error("Failed to create notifications for POC request:", notifError);
+    }
 
     return Response.json(pocRequest, { status: 201 });
   } catch (error) {

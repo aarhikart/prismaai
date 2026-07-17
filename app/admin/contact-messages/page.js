@@ -1,22 +1,20 @@
 import { getContactMessages } from "@/lib/contact-message-service";
 import { ADMIN_ROLES } from "@/lib/admin-access";
 import { requireRoleAccess } from "@/lib/auth";
+import AdminContactMessagesTabs from "./admin-contact-messages-tabs";
 
 export const dynamic = "force-dynamic";
 
-function formatDate(value) {
-  return new Date(value).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default async function AdminContactMessagesPage() {
   await requireRoleAccess([ADMIN_ROLES.ADMIN], "/admin/contact-messages");
-  const messages = await getContactMessages();
+  const rawMessages = await getContactMessages();
+
+  // Convert MongoDB complex fields into plain primitives
+  const messages = rawMessages.map((msg) => {
+    const plain = JSON.parse(JSON.stringify(msg));
+    plain._id = msg._id.toString();
+    return plain;
+  });
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-10 text-slate-900">
@@ -31,58 +29,7 @@ export default async function AdminContactMessagesPage() {
           </p>
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Company
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Phone
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Message
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Submitted
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {messages.map((message) => (
-                  <tr key={message._id.toString()} className="align-top hover:bg-slate-50">
-                    <td className="px-6 py-5 text-sm font-semibold text-slate-900">
-                      {message.name}
-                    </td>
-                    <td className="px-6 py-5 text-sm text-slate-600">{message.email}</td>
-                    <td className="px-6 py-5 text-sm text-slate-600">{message.company || "—"}</td>
-                    <td className="px-6 py-5 text-sm text-slate-600">{message.phone || "—"}</td>
-                    <td className="px-6 py-5 text-sm leading-6 text-slate-600">
-                      <div className="max-w-md whitespace-pre-wrap">{message.message}</div>
-                    </td>
-                    <td className="px-6 py-5 text-sm text-slate-600">
-                      {formatDate(message.createdAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {messages.length === 0 ? (
-            <div className="px-6 py-14 text-center text-slate-500">
-              No contact messages have been submitted yet.
-            </div>
-          ) : null}
-        </div>
+        <AdminContactMessagesTabs messages={messages} />
       </div>
     </div>
   );

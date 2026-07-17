@@ -1,6 +1,8 @@
 import { createContactMessage, getContactMessages } from "@/lib/contact-message-service";
 import { ADMIN_ROLES } from "@/lib/admin-access";
 import { requireApiRole } from "@/lib/auth";
+import AdminUser from "@/models/AdminUser";
+import { createNotification } from "@/lib/notification-service";
 
 function requireField(value, fieldName) {
   if (typeof value !== "string" || !value.trim()) {
@@ -56,6 +58,24 @@ export async function POST(req) {
       phone: normalizeOptional(body.phone),
       message: validateMessage(body.message),
     });
+
+    // Create notifications for all Admins and HRs
+    try {
+      const staff = await AdminUser.find({
+        role: { $in: [ADMIN_ROLES.ADMIN, ADMIN_ROLES.HR] }
+      });
+      for (const member of staff) {
+        await createNotification({
+          recipient: member._id,
+          sender: member._id,
+          senderName: "System",
+          action: "New Contact Message",
+          message: `New contact message received from ${message.name} (${message.company || "No Company"}).`,
+        });
+      }
+    } catch (notifError) {
+      console.error("Failed to create notifications for contact message:", notifError);
+    }
 
     return Response.json(message, { status: 201 });
   } catch (error) {

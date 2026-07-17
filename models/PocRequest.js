@@ -1,5 +1,24 @@
 import mongoose from "mongoose";
 
+const StatusHistorySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedBy: {
+      type: String,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const PocRequestSchema = new mongoose.Schema(
   {
     fullName: {
@@ -31,6 +50,17 @@ const PocRequestSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    status: {
+      type: String,
+      default: "new",
+      enum: ["new", "reviewed", "under review", "approved", "rejected"],
+      trim: true,
+    },
+    statusUpdatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    statusHistory: [StatusHistorySchema],
   },
   { timestamps: true }
 );

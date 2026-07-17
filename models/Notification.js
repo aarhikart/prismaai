@@ -19,11 +19,9 @@ const NotificationSchema = new mongoose.Schema(
     job: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Job",
-      required: true,
     },
     jobTitle: {
       type: String,
-      required: true,
     },
     action: {
       type: String,
@@ -40,5 +38,10 @@ const NotificationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Force delete from mongoose models cache to avoid Next.js hot-reload schema caching issues
+if (mongoose.models.Notification) {
+  delete mongoose.models.Notification;
+}
 
 export default mongoose.models.Notification || mongoose.model("Notification", NotificationSchema);

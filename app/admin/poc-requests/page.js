@@ -1,22 +1,20 @@
 import { getPocRequests } from "@/lib/poc-request-service";
 import { ADMIN_ROLES } from "@/lib/admin-access";
 import { requireRoleAccess } from "@/lib/auth";
+import AdminPocRequestsTabs from "./admin-poc-requests-tabs";
 
 export const dynamic = "force-dynamic";
 
-function formatDate(value) {
-  return new Date(value).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default async function AdminPocRequestsPage() {
   await requireRoleAccess([ADMIN_ROLES.ADMIN], "/admin/poc-requests");
-  const requests = await getPocRequests();
+  const rawRequests = await getPocRequests();
+
+  // Convert MongoDB complex fields into plain primitives
+  const requests = rawRequests.map((req) => {
+    const plain = JSON.parse(JSON.stringify(req));
+    plain._id = req._id.toString();
+    return plain;
+  });
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-10 text-slate-900">
@@ -32,64 +30,7 @@ export default async function AdminPocRequestsPage() {
           </p>
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Company
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Industry
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Message
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                    Submitted
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {requests.map((request) => (
-                  <tr key={request._id.toString()} className="align-top hover:bg-slate-50">
-                    <td className="px-6 py-5 text-sm font-semibold text-slate-900">
-                      {request.fullName || [request.firstName, request.lastName].filter(Boolean).join(" ")}
-                    </td>
-                    <td className="px-6 py-5 text-sm text-slate-600">{request.email}</td>
-                    <td className="px-6 py-5 text-sm text-slate-600">
-                      {request.company || "—"}
-                    </td>
-                    <td className="px-6 py-5 text-sm text-slate-600">
-                      <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                        {request.industry || request.industries?.[0] || "—"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-sm leading-6 text-slate-600">
-                      <div className="max-w-md whitespace-pre-wrap">{request.message || "—"}</div>
-                    </td>
-                    <td className="px-6 py-5 text-sm text-slate-600">
-                      {formatDate(request.createdAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {requests.length === 0 ? (
-            <div className="px-6 py-14 text-center text-slate-500">
-              No POC requests have been submitted yet.
-            </div>
-          ) : null}
-        </div>
+        <AdminPocRequestsTabs requests={requests} />
       </div>
     </div>
   );
