@@ -208,7 +208,7 @@ export default function JobDetailClient({ currentUser, initialJob }) {
   const isCreator = String(job.creatorId) === String(currentUser?.id);
 
   const showReviewPanel = currentStatus === "Pending Review" && (isAssignedReviewer || isAdmin);
-  const showAdminPanel = isAdmin;
+  const showAdminPanel = isAdmin && currentStatus !== "Approved" && currentStatus !== "Rejected";
   const showResubmitPanel = (isCreator || isAdmin) && (currentStatus === "Draft" || currentStatus === "Changes Requested");
 
   return (

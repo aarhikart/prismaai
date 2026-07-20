@@ -10,10 +10,12 @@ import { PartnerStrip } from "@/app/_components/landing/partner-strip";
 import { ProductsSection } from "@/app/_components/landing/products-section";
 import { StatsSection } from "@/app/_components/landing/stats-section";
 import { StoryMosaicSection } from "@/app/_components/landing/story-mosaic-section";
+import { VisitorTracker } from "@/app/_components/landing/visitor-tracker";
 
 export default function Home() {
   return (
     <main className="overflow-x-hidden bg-slate-950">
+      <VisitorTracker />
       <ImportantNoticePopup />
       <Header />
       <HeroSection />

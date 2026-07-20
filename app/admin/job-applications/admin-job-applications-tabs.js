@@ -4,13 +4,33 @@
 
 import { useState } from "react";
 // All necessary icons imported from lucide-react
-import { Trash2, CheckCircle, Loader2, Eye, RefreshCw, X } from "lucide-react"; 
+import { Trash2, CheckCircle, Loader2, Eye, RefreshCw, X, ChevronLeft, ChevronRight } from "lucide-react"; 
+
+const RECORDS_PER_PAGE = 20;
+
+function getPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, "ellipsis", totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, 2, 3, "ellipsis", totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, "ellipsis-start", currentPage - 1, currentPage, currentPage + 1, "ellipsis-end", totalPages];
+}
 
 export default function AdminJobApplicationsTabs({ applications: initialApplications }) {
   const [activeTab, setActiveTab] = useState("new");
   const [applications, setApplications] = useState(initialApplications || []);
   const [isDeleting, setIsDeleting] = useState(null);
   const [isUpdating, setIsUpdating] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Modal control states
   const [statusModalApp, setStatusModalApp] = useState(null);
@@ -20,6 +40,18 @@ export default function AdminJobApplicationsTabs({ applications: initialApplicat
   // SEPARATION ENGINE: "new" data stays on tab 1. Any update means it moves to tab 2 and STAYS there.
   const newApplications = applications.filter(app => app.status === "new");
   const reviewedApplications = applications.filter(app => app.status !== "new");
+  const statusOptions = Array.from(new Set(reviewedApplications.map((app) => app.status).filter(Boolean)));
+  const filteredApplications =
+    statusFilter === "all"
+      ? reviewedApplications
+      : reviewedApplications.filter((app) => app.status === statusFilter);
+  const totalPages = Math.max(1, Math.ceil(filteredApplications.length / RECORDS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedApplications = filteredApplications.slice(
+    (safeCurrentPage - 1) * RECORDS_PER_PAGE,
+    safeCurrentPage * RECORDS_PER_PAGE
+  );
+  const paginationItems = getPaginationItems(safeCurrentPage, totalPages);
 
   // Format date helper for human scanning
   const formatDate = (dateString) => {
@@ -59,7 +91,6 @@ export default function AdminJobApplicationsTabs({ applications: initialApplicat
   // Status Update Handler for NEW tab (Moves item to 'reviewed')
   const handleMoveToReviewed = async (id) => {
     setIsUpdating(id);
-    const updateTime = new Date().toISOString();
     try {
       const res = await fetch(`/api/job-applications/${id}`, {
         method: "PATCH",
@@ -293,7 +324,111 @@ return (
       {/* Conditionally show active tab grid templates */}
       <div className="mt-6">
         {activeTab === "new" && renderTable(newApplications, "new")}
-        {activeTab === "reviewed" && renderTable(reviewedApplications, "reviewed")}
+        {activeTab === "reviewed" && (
+          <>
+            <div className="mb-4 flex flex-col gap-4 rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                  Reviewed Applications
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Showing {filteredApplications.length} of {reviewedApplications.length} reviewed records.
+                </p>
+              </div>
+              <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:w-64">
+                Status Filter
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#00aeef]"
+                >
+                  <option value="all">All statuses</option>
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status} className="capitalize">
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {renderTable(paginatedApplications, "reviewed")}
+
+            {totalPages > 1 && (
+              <div className="mt-6 flex justify-center">
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={safeCurrentPage === 1}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400 shadow-sm transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <div className="flex h-11 items-center gap-1 rounded-full bg-slate-100 px-2 shadow-sm">
+                    {paginationItems.map((item) =>
+                      typeof item === "string" ? (
+                        <span key={item} className="px-3 text-sm font-semibold text-slate-500">
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setCurrentPage(item)}
+                          className={`h-8 min-w-8 rounded-full px-2 text-sm font-semibold transition ${
+                            item === safeCurrentPage
+                              ? "bg-violet-600 text-white shadow-lg shadow-violet-500/40"
+                              : "text-slate-600 hover:bg-white"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg shadow-violet-500/40 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-sm"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="hidden">
+        <span>
+          Page {safeCurrentPage} of {totalPages} · 20 records per page
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={safeCurrentPage === 1}
+            className="rounded-full border border-slate-200 px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={safeCurrentPage === totalPages}
+            className="rounded-full border border-slate-200 px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {/* MODAL 1: STATUS UPDATE MODAL */}

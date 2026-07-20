@@ -2,9 +2,9 @@ import Link from "next/link";
 import { getJobs } from "@/lib/job-service";
 // import { FooterSection } from "@/app/_components/landing/footer-section";
 import { Header } from "@/app/_components/landing/header";
-
-
 import Career from "./_components/career";
+
+
 
 
 

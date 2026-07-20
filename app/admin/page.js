@@ -6,6 +6,7 @@ import Post from "@/models/Post";
 import JobApplication from "@/models/JobApplication";
 import PocRequest from "@/models/PocRequest";
 import ContactMessage from "@/models/ContactMessage";
+import WebsiteVisitor from "@/models/WebsiteVisitor";
 import { requireAdminUser } from "@/lib/auth";
 import DashboardCharts from "./_components/dashboard-charts";
 import RecentAlerts from "./_components/recent-alerts";
@@ -39,6 +40,7 @@ export default async function AdminDashboardPage() {
     rawJobApps,
     rawPocReqs,
     rawContactMsgs,
+    visitorCounter,
   ] = await Promise.all([
     getJobs(),
     getArticles(),
@@ -47,6 +49,7 @@ export default async function AdminDashboardPage() {
     JobApplication.find({}).sort({ createdAt: -1 }).lean(),
     PocRequest.find({}).sort({ createdAt: -1 }).lean(),
     ContactMessage.find({}).sort({ createdAt: -1 }).lean(),
+    WebsiteVisitor.findOne({ key: "landing-page" }).lean(),
   ]);
 
   // Serialize to prevent Server Component serialization errors
@@ -71,6 +74,7 @@ export default async function AdminDashboardPage() {
   const underReviewContacts = contactMsgs.filter((app) => app.status === "under review").length;
   const contactedContacts = contactMsgs.filter((app) => app.status === "contacted").length;
   const ignoredContacts = contactMsgs.filter((app) => app.status === "ignored").length;
+  const totalVisitors = visitorCounter?.total || 0;
 
   // Build Recent Activity / Live Alerts Feed (top 5 across all collections)
   const recentAlertsList = [
@@ -124,6 +128,22 @@ export default async function AdminDashboardPage() {
 
       {/* 2. Statistical Breakdown Grid */}
       <section className="grid gap-6 md:grid-cols-3">
+        <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">Visits</span>
+            <h3 className="text-xl font-bold text-slate-900">Website Visitors</h3>
+          </div>
+          <div className="mt-5">
+            <p className="text-4xl font-extrabold text-slate-950">{formatCount(totalVisitors)}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1">
+              Landing page total
+            </p>
+          </div>
+          <p className="mt-6 border-t border-slate-100 pt-5 text-sm leading-6 text-slate-500">
+            Counts new landing-page visits once per browser every 24 hours.
+          </p>
+        </article>
+
         {/* Job Applications Stats Card */}
         <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div className="flex items-center gap-3">
