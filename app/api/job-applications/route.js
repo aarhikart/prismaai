@@ -4,6 +4,7 @@ import { requireApiRole } from "@/lib/auth";
 import { saveUploadedFile } from "@/lib/upload-file";
 import AdminUser from "@/models/AdminUser";
 import { createNotification } from "@/lib/notification-service";
+import { sendJobApplicationEmails } from "@/lib/mailer";
 
 function requireField(value, fieldName) {
   if (!value || typeof value !== "string" || !value.trim()) {
@@ -70,6 +71,13 @@ export async function POST(req) {
       }
     } catch (notifError) {
       console.error("Failed to create notifications for application:", notifError);
+    }
+
+    // Send internal notification email & applicant auto-reply email via Gmail SMTP
+    try {
+      await sendJobApplicationEmails(application);
+    } catch (emailError) {
+      console.error("Failed to send Job Application emails:", emailError);
     }
 
     return Response.json(application, { status: 201 });

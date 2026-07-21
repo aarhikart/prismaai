@@ -3,6 +3,7 @@ import { ADMIN_ROLES } from "@/lib/admin-access";
 import { requireApiRole } from "@/lib/auth";
 import AdminUser from "@/models/AdminUser";
 import { createNotification } from "@/lib/notification-service";
+import { sendContactEmails } from "@/lib/mailer";
 
 function requireField(value, fieldName) {
   if (typeof value !== "string" || !value.trim()) {
@@ -75,6 +76,13 @@ export async function POST(req) {
       }
     } catch (notifError) {
       console.error("Failed to create notifications for contact message:", notifError);
+    }
+
+    // Send internal notification email & user auto-reply email via Gmail SMTP
+    try {
+      await sendContactEmails(message);
+    } catch (emailError) {
+      console.error("Failed to send contact emails:", emailError);
     }
 
     return Response.json(message, { status: 201 });

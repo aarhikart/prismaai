@@ -3,6 +3,7 @@ import { ADMIN_ROLES } from "@/lib/admin-access";
 import { requireApiRole } from "@/lib/auth";
 import AdminUser from "@/models/AdminUser";
 import { createNotification } from "@/lib/notification-service";
+import { sendPocEmails } from "@/lib/mailer";
 
 function requireField(value, fieldName) {
   if (typeof value !== "string" || !value.trim()) {
@@ -84,6 +85,13 @@ export async function POST(req) {
       }
     } catch (notifError) {
       console.error("Failed to create notifications for POC request:", notifError);
+    }
+
+    // Send internal notification email & user auto-reply email via Gmail SMTP
+    try {
+      await sendPocEmails(pocRequest);
+    } catch (emailError) {
+      console.error("Failed to send POC emails:", emailError);
     }
 
     return Response.json(pocRequest, { status: 201 });
