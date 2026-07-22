@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, CheckCircle, Loader2, Eye, RefreshCw, X, ChevronLeft, ChevronRight } from "lucide-react"; 
+import { Trash2, CheckCircle, Loader2, Eye, RefreshCw, X, ChevronLeft, ChevronRight, Calendar, CalendarDays, Layers, Search, XCircle } from "lucide-react"; 
+import FilterDropdown from "../_components/FilterDropdown";
 
 const RECORDS_PER_PAGE = 20;
 
@@ -25,6 +26,11 @@ export default function AdminPocRequestsTabs({ requests: initialRequests }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Month & Year Filter state (default to current month and current year)
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+
   // Modal control states
   const [statusModalReq, setStatusModalReq] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -34,10 +40,75 @@ export default function AdminPocRequestsTabs({ requests: initialRequests }) {
   const newRequests = requests.filter(req => req.status === "new");
   const reviewedRequests = requests.filter(req => req.status !== "new");
   const statusOptions = Array.from(new Set(reviewedRequests.map((req) => req.status).filter(Boolean)));
-  const filteredRequests =
-    statusFilter === "all"
-      ? reviewedRequests
-      : reviewedRequests.filter((req) => req.status === statusFilter);
+
+  const periodRequests = reviewedRequests.filter((req) => {
+    if (!req.createdAt) return false;
+    const date = new Date(req.createdAt);
+    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+  });
+
+  const filteredRequests = periodRequests.filter((req) => {
+    return statusFilter === "all" || req.status === statusFilter;
+  });
+
+  const monthOptions = [
+    { value: 0, label: "January", icon: <Calendar size={16} /> },
+    { value: 1, label: "February", icon: <Calendar size={16} /> },
+    { value: 2, label: "March", icon: <Calendar size={16} /> },
+    { value: 3, label: "April", icon: <Calendar size={16} /> },
+    { value: 4, label: "May", icon: <Calendar size={16} /> },
+    { value: 5, label: "June", icon: <Calendar size={16} /> },
+    { value: 6, label: "July", icon: <Calendar size={16} /> },
+    { value: 7, label: "August", icon: <Calendar size={16} /> },
+    { value: 8, label: "September", icon: <Calendar size={16} /> },
+    { value: 9, label: "October", icon: <Calendar size={16} /> },
+    { value: 10, label: "November", icon: <Calendar size={16} /> },
+    { value: 11, label: "December", icon: <Calendar size={16} /> },
+  ];
+
+  const currentYearVal = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 6 }, (_, i) => {
+    const y = currentYearVal - i;
+    return { value: y, label: String(y), icon: <CalendarDays size={16} /> };
+  });
+
+  const standardStatuses = ["reviewed", "under review", "approved", "rejected"];
+  const allDbStatuses = Array.from(new Set([...standardStatuses, ...reviewedRequests.map(req => req.status).filter(Boolean)]));
+
+  const statusDropdownOptions = [
+    {
+      value: "all",
+      label: "All Statuses",
+      icon: <Layers size={16} />,
+      badge: periodRequests.length,
+      badgeColor: "bg-slate-100 text-slate-700 border border-slate-200"
+    },
+    ...allDbStatuses.map(status => {
+      let icon = <Eye size={16} />;
+      let badgeColor = "bg-blue-50 text-blue-700 border border-blue-200";
+      if (status === "under review") {
+        icon = <Search size={16} />;
+        badgeColor = "bg-amber-50 text-amber-700 border border-amber-200";
+      } else if (status === "approved") {
+        icon = <CheckCircle size={16} />;
+        badgeColor = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+      } else if (status === "rejected") {
+        icon = <XCircle size={16} />;
+        badgeColor = "bg-rose-50 text-rose-700 border border-rose-200";
+      }
+      
+      const count = periodRequests.filter(req => req.status === status).length;
+      
+      return {
+        value: status,
+        label: status.charAt(0).toUpperCase() + status.slice(1),
+        icon,
+        badge: count,
+        badgeColor
+      };
+    })
+  ];
+
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / RECORDS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedRequests = filteredRequests.slice(
@@ -318,27 +389,47 @@ export default function AdminPocRequestsTabs({ requests: initialRequests }) {
                   Reviewed Requests
                 </p>
                 <p className="mt-1 text-sm text-slate-600">
-                  Showing {filteredRequests.length} of {reviewedRequests.length} reviewed records.
+                  Showing {filteredRequests.length} of {periodRequests.length} reviewed records.
                 </p>
               </div>
-              <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:w-64">
-                Status Filter
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#00aeef]"
-                >
-                  <option value="all">All statuses</option>
-                  {statusOptions.map((status) => (
-                    <option key={status} value={status} className="capitalize">
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:w-44">
+                  Month
+                  <FilterDropdown
+                    value={selectedMonth}
+                    onChange={(val) => {
+                      setSelectedMonth(val);
+                      setCurrentPage(1);
+                    }}
+                    options={monthOptions}
+                    className="w-44"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:w-32">
+                  Year
+                  <FilterDropdown
+                    value={selectedYear}
+                    onChange={(val) => {
+                      setSelectedYear(val);
+                      setCurrentPage(1);
+                    }}
+                    options={yearOptions}
+                    className="w-32"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-slate-700 sm:w-[220px]">
+                  Status Filter
+                  <FilterDropdown
+                    value={statusFilter}
+                    onChange={(val) => {
+                      setStatusFilter(val);
+                      setCurrentPage(1);
+                    }}
+                    options={statusDropdownOptions}
+                    className="w-[220px]"
+                  />
+                </label>
+              </div>
             </div>
 
             {renderTable(paginatedRequests, "reviewed")}

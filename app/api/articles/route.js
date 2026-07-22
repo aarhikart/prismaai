@@ -12,7 +12,10 @@ function validateTextField(value, fieldName) {
 }
 
 function validateLiveUrl(value) {
-  const liveUrl = validateTextField(value, "Live article URL");
+  if (value === null || value === undefined || (typeof value === "string" && !value.trim())) {
+    return "";
+  }
+  const liveUrl = value.trim();
 
   try {
     new URL(liveUrl);

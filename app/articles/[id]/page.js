@@ -25,6 +25,15 @@ function formatDate(value) {
   }).format(parsedDate);
 }
 
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 export default async function ArticleDetailPage({ params }) {
   const { id } = await params;
   const article = await getArticleById(id);
@@ -108,7 +117,7 @@ export default async function ArticleDetailPage({ params }) {
                   ))}
               </div>
 
-              {article.liveUrl ? (
+              {article.liveUrl && isValidUrl(article.liveUrl) ? (
                 <a
                   href={article.liveUrl}
                   target="_blank"

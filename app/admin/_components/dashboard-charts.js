@@ -2,13 +2,19 @@
 
 import { useState } from "react";
 
-export default function DashboardCharts({ applications }) {
+export default function DashboardCharts({ 
+  applications, 
+  data = applications,
+  title = "Job Applications Overview",
+  subtitle = "Monitor applicant traffic patterns across days, months, and years.",
+  valueSuffix = "applications"
+}) {
   const [groupBy, setGroupBy] = useState("month"); // "day" | "month" | "year"
   const [yearFilter, setYearFilter] = useState("all"); // "all" | "2025" | "2026"
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
   // 1. Filter applications by Year if active
-  const filteredApps = applications.filter((app) => {
+  const filteredApps = (data || []).filter((app) => {
     if (!app.createdAt) return false;
     const date = new Date(app.createdAt);
     if (isNaN(date.getTime())) return false;
@@ -68,7 +74,7 @@ export default function DashboardCharts({ applications }) {
   } else if (groupBy === "year") {
     // Years wise
     const yearsMap = {};
-    applications.forEach((app) => {
+    (data || []).forEach((app) => {
       if (!app.createdAt) return;
       const date = new Date(app.createdAt);
       if (isNaN(date.getTime())) return;
@@ -106,9 +112,9 @@ export default function DashboardCharts({ applications }) {
     <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200 xl:col-span-2">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5">
         <div>
-          <h2 className="text-2xl font-bold text-slate-950">Job Applications Overview</h2>
+          <h2 className="text-2xl font-bold text-slate-950">{title}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Monitor applicant traffic patterns across days, months, and years.
+            {subtitle}
           </p>
         </div>
 
@@ -188,7 +194,7 @@ export default function DashboardCharts({ applications }) {
             }}
           >
             <div className="text-cyan-300 font-bold">{chartData[hoveredIndex].label}</div>
-            <div className="mt-0.5 text-white">{chartData[hoveredIndex].value.toLocaleString()} applications</div>
+            <div className="mt-0.5 text-white">{chartData[hoveredIndex].value.toLocaleString()} {valueSuffix}</div>
           </div>
         )}
 

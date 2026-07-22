@@ -8,14 +8,9 @@ import PocRequest from "@/models/PocRequest";
 import ContactMessage from "@/models/ContactMessage";
 import WebsiteVisitor from "@/models/WebsiteVisitor";
 import { requireAdminUser } from "@/lib/auth";
-import DashboardCharts from "./_components/dashboard-charts";
-import RecentAlerts from "./_components/recent-alerts";
+import AdminDashboardClient from "./_components/admin-dashboard-client";
 
 export const dynamic = "force-dynamic";
-
-function formatCount(value) {
-  return value.toLocaleString("en-IN");
-}
 
 function serializeDoc(doc) {
   if (!doc) return null;
@@ -57,25 +52,6 @@ export default async function AdminDashboardPage() {
   const pocReqs = rawPocReqs.map(serializeDoc);
   const contactMsgs = rawContactMsgs.map(serializeDoc);
 
-  // Compute Job Applications Stats
-  const totalJobApps = jobApps.length;
-  const underReviewJobApps = jobApps.filter((app) => app.status === "under review").length;
-  const shortlistedJobApps = jobApps.filter((app) => app.status === "shortlisted").length;
-  const notShortlistedJobApps = jobApps.filter((app) => app.status === "not shortlisted").length;
-
-  // Compute POC Requests Stats
-  const totalPocs = pocReqs.length;
-  const underReviewPocs = pocReqs.filter((app) => app.status === "under review").length;
-  const approvedPocs = pocReqs.filter((app) => app.status === "approved").length;
-  const rejectedPocs = pocReqs.filter((app) => app.status === "rejected").length;
-
-  // Compute Contact Messages Stats
-  const totalContacts = contactMsgs.length;
-  const underReviewContacts = contactMsgs.filter((app) => app.status === "under review").length;
-  const contactedContacts = contactMsgs.filter((app) => app.status === "contacted").length;
-  const ignoredContacts = contactMsgs.filter((app) => app.status === "ignored").length;
-  const totalVisitors = visitorCounter?.total || 0;
-
   // Build Recent Activity / Live Alerts Feed (top 5 across all collections)
   const recentAlertsList = [
     ...jobApps.slice(0, 5).map((app) => ({
@@ -104,208 +80,17 @@ export default async function AdminDashboardPage() {
     .slice(0, 5);
 
   return (
-    <div className="grid gap-8">
-      {/* 1. Header Hero Card */}
-      <section className="rounded-[2.5rem] bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.28),_transparent_30%),linear-gradient(145deg,#020617_0%,#0f172a_38%,#155e75_120%)] px-6 py-8 text-white shadow-xl sm:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/90">
-          Executive Overview
-        </p>
-        <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="max-w-3xl text-3xl font-bold leading-tight sm:text-5xl">
-              Welcome back, {currentUser.username}. Admin dashboard is live.
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-              Monitor incoming candidate applications, business POC requests, contact inquiries, and operational metrics.
-            </p>
-          </div>
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/10 px-5 py-4 backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Current Role</p>
-            <p className="mt-2 text-2xl font-semibold">{currentUser.role}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Statistical Breakdown Grid */}
-      <section className="grid gap-6 md:grid-cols-3">
-        <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">Visits</span>
-            <h3 className="text-xl font-bold text-slate-900">Website Visitors</h3>
-          </div>
-          <div className="mt-5">
-            <p className="text-4xl font-extrabold text-slate-950">{formatCount(totalVisitors)}</p>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1">
-              Landing page total
-            </p>
-          </div>
-          <p className="mt-6 border-t border-slate-100 pt-5 text-sm leading-6 text-slate-500">
-            Counts new landing-page visits once per browser every 24 hours.
-          </p>
-        </article>
-
-        {/* Job Applications Stats Card */}
-        <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📄</span>
-            <h3 className="text-xl font-bold text-slate-900">Job Applications</h3>
-          </div>
-          <div className="mt-5">
-            <p className="text-4xl font-extrabold text-slate-950">{formatCount(totalJobApps)}</p>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1">Total Received</p>
-          </div>
-          <div className="mt-6 border-t border-slate-100 pt-5 space-y-3.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                Under Review
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(underReviewJobApps)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Shortlisted
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(shortlistedJobApps)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-rose-500" />
-                Not Shortlisted
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(notShortlistedJobApps)}</span>
-            </div>
-          </div>
-        </article>
-
-        {/* POC Requests Stats Card */}
-        <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📌</span>
-            <h3 className="text-xl font-bold text-slate-900">POC Requests</h3>
-          </div>
-          <div className="mt-5">
-            <p className="text-4xl font-extrabold text-slate-950">{formatCount(totalPocs)}</p>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1">Total Submissions</p>
-          </div>
-          <div className="mt-6 border-t border-slate-100 pt-5 space-y-3.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                Under Review
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(underReviewPocs)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Approved
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(approvedPocs)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-rose-500" />
-                Rejected
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(rejectedPocs)}</span>
-            </div>
-          </div>
-        </article>
-
-        {/* Contact Messages Stats Card */}
-        <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📩</span>
-            <h3 className="text-xl font-bold text-slate-900">Contact Messages</h3>
-          </div>
-          <div className="mt-5">
-            <p className="text-4xl font-extrabold text-slate-950">{formatCount(totalContacts)}</p>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1">Total Inquiries</p>
-          </div>
-          <div className="mt-6 border-t border-slate-100 pt-5 space-y-3.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                Under Review
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(underReviewContacts)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Contacted
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(contactedContacts)}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-slate-600 font-medium">
-                <span className="h-2 w-2 rounded-full bg-slate-950" />
-                Ignored
-              </span>
-              <span className="font-bold text-slate-900">{formatCount(ignoredContacts)}</span>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      {/* 3. Bar Chart & Live Alerts Section */}
-      <section className="grid gap-6 xl:grid-cols-3">
-        {/* Custom Interactive SVG Chart Component */}
-        <DashboardCharts applications={jobApps} />
-
-        {/* Live Alerts Feed Component */}
-        <RecentAlerts initialAlerts={recentAlertsList} />
-      </section>
-
-      {/* 4. Details / Admin Metadata Section */}
-      <section className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-        <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-2xl font-bold text-slate-950">Admin Panel Coverage</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Secure administrative console modules protected by JWT authentication and role-based middleware control.
-          </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {[
-              "Protected session cookie verification layers",
-              "Role-based sidebar navigation state mappings",
-              "Direct dashboard metrics updates integration",
-              "Preserved background CRUD collections",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-5 text-sm text-slate-700 font-medium"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="rounded-[2.5rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-2xl font-bold text-slate-950">Active Modules Summary</h2>
-          <div className="mt-6 space-y-4">
-            {[
-              ["Jobs Available", `${jobs.length} postings active`],
-              ["Editorial Blogs", `${formatCount(totalBlogs)} blog entries`],
-              ["System Articles", `${articles.length} news articles`],
-              ["Press Releases", `${pressReleases.length} corporate assets`],
-            ].map(([label, detail]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between rounded-[1.5rem] border border-slate-100 px-5 py-4 bg-slate-50/20"
-              >
-                <div>
-                  <p className="text-base font-semibold text-slate-950">{label}</p>
-                  <p className="mt-0.5 text-sm text-slate-500">{detail}</p>
-                </div>
-                <div className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
-    </div>
+    <AdminDashboardClient
+      currentUser={JSON.parse(JSON.stringify(currentUser))}
+      jobs={JSON.parse(JSON.stringify(jobs))}
+      articles={JSON.parse(JSON.stringify(articles))}
+      pressReleases={JSON.parse(JSON.stringify(pressReleases))}
+      totalBlogs={totalBlogs}
+      jobApps={JSON.parse(JSON.stringify(jobApps))}
+      pocReqs={JSON.parse(JSON.stringify(pocReqs))}
+      contactMsgs={JSON.parse(JSON.stringify(contactMsgs))}
+      visitorCounter={JSON.parse(JSON.stringify(visitorCounter))}
+      recentAlertsList={JSON.parse(JSON.stringify(recentAlertsList))}
+    />
   );
 }

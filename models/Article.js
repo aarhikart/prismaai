@@ -14,7 +14,7 @@ const ArticleSchema = new mongoose.Schema(
     },
     liveUrl: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
     image: {

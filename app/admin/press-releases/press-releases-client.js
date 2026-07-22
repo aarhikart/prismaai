@@ -198,7 +198,6 @@ export default function PressReleasesClient() {
                 onChange={handleChange}
                 placeholder="https://example.com/press-release"
                 className="rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-sky-500"
-                required
               />
             </label>
 
@@ -293,14 +292,6 @@ export default function PressReleasesClient() {
                 <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-600">
                   {pressRelease.description}
                 </p>
-                <a
-                  href={pressRelease.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex rounded-full border border-sky-500 px-4 py-2 text-sm font-semibold text-sky-600 transition hover:bg-sky-500 hover:text-white"
-                >
-                  View Live Press Release
-                </a>
                 <div className="mt-5 flex gap-3">
                   <button
                     type="button"

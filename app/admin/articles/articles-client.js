@@ -195,7 +195,6 @@ export default function ArticlesClient() {
                 onChange={handleChange}
                 placeholder="https://example.com/article"
                 className="rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-orange-500"
-                required
               />
             </label>
 
@@ -280,14 +279,6 @@ export default function ArticlesClient() {
                 <p className="mt-3 line-clamp-4 text-sm leading-6 text-stone-600">
                   {article.description}
                 </p>
-                <a
-                  href={article.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex rounded-full border border-orange-500 px-4 py-2 text-sm font-semibold text-orange-600 transition hover:bg-orange-500 hover:text-white"
-                >
-                  View Live Article
-                </a>
                 <div className="mt-5 flex gap-3">
                   <button
                     type="button"

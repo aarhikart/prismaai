@@ -25,6 +25,15 @@ function formatDate(value) {
   }).format(parsedDate);
 }
 
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 export default async function PressReleaseDetailPage({ params }) {
   const { id } = await params;
   const pressRelease = await getPressReleaseById(id);
@@ -112,7 +121,7 @@ export default async function PressReleaseDetailPage({ params }) {
                   ))}
               </div>
 
-              {pressRelease.liveUrl ? (
+              {pressRelease.liveUrl && isValidUrl(pressRelease.liveUrl) ? (
                 <a
                   href={pressRelease.liveUrl}
                   target="_blank"
